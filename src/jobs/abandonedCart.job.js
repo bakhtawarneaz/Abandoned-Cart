@@ -4,7 +4,7 @@ const abandonedCartQueue = require('../queues/abandonedCart.queue');
 abandonedCartQueue.add(
   {},
   {
-    repeat: { every: 10 * 1000 }, // 10 min
+    repeat: { every: 20 * 1000 }, // 10 min
     removeOnComplete: true,
     removeOnFail: false,
   }

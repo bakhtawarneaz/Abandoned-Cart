@@ -77,6 +77,8 @@ exports.sendWhatsAppMessage = async (shopifyOrder, StoreWhatsappTemplates) => {
       }
     );
 
+    console.log("📩 WhatsApp API Response:", JSON.stringify(response.data, null, 2));
+    
     if (response?.data) {
       console.log(`✅ WhatsApp sent to ${customerPhone}`);
 
