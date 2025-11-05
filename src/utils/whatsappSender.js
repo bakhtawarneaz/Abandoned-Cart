@@ -1,9 +1,9 @@
 const axios = require('axios');
 const WhatsappLog = require('../models/whatsappLog.model');
 
-exports.sendWhatsAppMessage = async (shopifyOrder, StoreWhatsappTemplates) => {
+exports.sendWhatsAppMessage = async (data, StoreWhatsappTemplates) => {
   try {
-    const order = shopifyOrder || {};
+    const order = data || {};
 
     // ✅ Extract customer and order details
     const customerName = `${order?.billing_address?.first_name || order?.customer?.first_name || ""} ${order?.billing_address?.last_name || order?.customer?.last_name || ""}`.trim();
@@ -81,7 +81,6 @@ exports.sendWhatsAppMessage = async (shopifyOrder, StoreWhatsappTemplates) => {
     
     if (response?.data) {
       console.log(`✅ WhatsApp sent to ${customerPhone}`);
-
       await WhatsappLog.create({
         store_id: StoreWhatsappTemplates.store_id,
         cart_id: order?.cart_id || null,

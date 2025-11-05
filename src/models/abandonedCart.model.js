@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
 const AbandonedCart = sequelize.define('AbandonedCart', {
-  shopify_checkout_id: { type: DataTypes.STRING },
+  shopify_checkout_id: { type: DataTypes.STRING, unique: true, },
   store_id: { type: DataTypes.INTEGER },
   customer_name: { type: DataTypes.STRING },
   customer_phone: { type: DataTypes.STRING },
