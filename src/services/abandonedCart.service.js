@@ -76,7 +76,7 @@ exports.handleCheckoutCreate = async (checkoutData) => {
       } else {
         console.warn(`⚠️ Failed to send initial message for cart ID: ${freshCart.id}`);
       }
-    }, 20 * 1000);
+    }, 15 * 60 * 1000);
   } catch (err) {
     console.error("❌ Error in handleCheckoutCreate:", err.message);
   }
