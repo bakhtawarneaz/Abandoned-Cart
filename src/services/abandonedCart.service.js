@@ -12,7 +12,7 @@ exports.handleCheckoutCreate = async (checkoutData) => {
       console.log("✅ Checkout already converted to order — skipping abandoned cart");
       return;
     }
-    
+
     if (!checkoutData.phone && !checkoutData.shipping_address?.phone && !checkoutData.customer?.phone) {
       console.log("⏳ Skipping — no phone found yet");
       return;
@@ -65,13 +65,11 @@ exports.handleCheckoutCreate = async (checkoutData) => {
 
     setTimeout(async () => {
       const freshCart = await AbandonedCart.findOne({ where: { customer_phone: customerPhone } });
-      if (!freshCart || freshCart.sent_status) {
-        console.log(`⚠️ Skipping — message already sent for cart ID: ${freshCart?.id}`);
-        return;
-      }
-
+      // if (!freshCart || freshCart.sent_status) {
+      //   console.log(`⚠️ Skipping — message already sent for cart ID: ${freshCart?.id}`);
+      //   return;
+      // }
       const result = await sendWhatsAppMessage({ ...checkoutData, cart_id: freshCart.id,abandoned_checkout_url: freshCart.abandoned_checkout_url }, template);
-
       if (result.success) {
         await freshCart.update({ sent_status: true });
         console.log(`✅ Initial message sent for cart ID: ${freshCart.id}`);
