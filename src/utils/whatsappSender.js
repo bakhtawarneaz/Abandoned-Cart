@@ -21,10 +21,23 @@ exports.sendWhatsAppMessage = async (data, StoreWhatsappTemplates) => {
 
     const parameters = textParameters.map(param => {
       let value = "";
+      // switch (param.sampleValue) {
+      //   case "customer_name": value = customerName; break;
+      //   case "products": value = productNames; break;
+      //   default: value = param.value || ""; break;
+      // }
       switch (param.sampleValue) {
-        case "customer_name": value = customerName; break;
-        case "products": value = productNames; break;
-        default: value = param.value || ""; break;
+        case "customer_name":
+          value = customerName;
+          break;
+      
+        case "products":
+          value = order?.abandoned_checkout_url || "";
+          break;
+      
+        default:
+          value = param.value || "";
+          break;
       }
       return {
         paramName: param.paramName || null,
