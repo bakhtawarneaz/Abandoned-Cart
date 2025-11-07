@@ -103,7 +103,7 @@ exports.sendWhatsAppMessage = async (data, StoreWhatsappTemplates) => {
         customer_phone: customerPhone,
         message_text: StoreWhatsappTemplates.body_text,
         response_status: 'SENT',
-        response_id: response?.data?.data?.messageId || null
+        whatsapp_response: response.data
       });
 
       return { success: true, response: response.data };
@@ -113,7 +113,6 @@ exports.sendWhatsAppMessage = async (data, StoreWhatsappTemplates) => {
 
   } catch (error) {
     console.error("❌ WhatsApp Send Error:", error.response?.data || error.message);
-
     await WhatsappLog.create({
       store_id: StoreWhatsappTemplates.store_id,
       cart_id: order?.cart_id || null,
@@ -123,7 +122,7 @@ exports.sendWhatsAppMessage = async (data, StoreWhatsappTemplates) => {
       customer_phone: customerPhone,
       message_text: StoreWhatsappTemplates.body_text,
       response_status: 'FAILED',
-      response_id: null
+      whatsapp_response: error.response?.data
     });
 
     return { success: false, error: error.response?.data || error.message };

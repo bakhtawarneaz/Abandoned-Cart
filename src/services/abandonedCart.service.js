@@ -106,10 +106,10 @@ exports.handleCheckoutCreate = async (checkoutData) => {
       }
 
       const freshCart = await AbandonedCart.findOne({ where: { customer_phone: customerPhone } });
-      // if (!freshCart || freshCart.sent_status) {
-      //   console.log(`⚠️ Skipping — message already sent for cart ID: ${freshCart?.id}`);
-      //   return;
-      // }
+      if (!freshCart || freshCart.sent_status) {
+        console.log(`⚠️ Skipping — message already sent for cart ID: ${freshCart?.id}`);
+        return;
+      }
       console.log("📤 Sending WhatsApp message for abandoned checkout...");
       const result = await sendWhatsAppMessage(
         {

@@ -10,7 +10,7 @@ const WhatsappLog = sequelize.define('WhatsappLog', {
   customer_phone: { type: DataTypes.STRING },
   message_text: { type: DataTypes.TEXT },
   response_status: { type: DataTypes.STRING },
-  response_id: { type: DataTypes.STRING },
+  whatsapp_response: { type: DataTypes.JSONB },
   sent_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 });
 
