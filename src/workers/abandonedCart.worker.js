@@ -1,58 +1,61 @@
 const AbandonedCart = require('../models/abandonedCart.model');
+const Store = require('../models/store.model');
 const WhatsappTemplate = require('../models/whatsappTemplate.model');
 const { sendWhatsAppMessage } = require('../utils/whatsappSender');
 const axios = require('axios');
+
+
 
 exports.processAbandonedCartJob = async () => {
   try {
     console.log("🔁 Running abandoned cart resend job...");
 
     const carts = await AbandonedCart.findAll({
-      where: { sent_status: true, recovered: false },
+      where: { recovered: false }
     });
 
     for (const cart of carts) {
-      const stillActive = await verifyCheckoutExists(cart);
+      const store = await Store.findOne({ where: { id: cart.store_id, status: true } });
+      if (!store) continue;
 
+      const stillActive = await verifyCheckoutExists(cart, store);
       if (!stillActive) {
-        console.log(`🛒 Cart ${cart.shopify_checkout_id} inactive — marking recovered.`);
         await cart.update({ recovered: true });
         continue;
       }
 
-      const template = await WhatsappTemplate.findOne({
-        where: { store_id: cart.store_id },
-      });
+      const template = await WhatsappTemplate.findOne({ where: { store_id: store.id } });
       if (!template) continue;
 
-      const result = await sendWhatsAppMessage(
-        {
-          id: cart.shopify_checkout_id,
-          phone: cart.customer_phone,
-          customer: { first_name: cart.customer_name },
-          line_items: cart.cart_data,
-          abandoned_checkout_url: cart.abandoned_checkout_url,
-          cart_id: cart.id,
-        },
-        template
-      );
+      const now = Date.now();
 
-      if (result.success) {
-        console.log(`✅ Reminder re-sent to ${cart.customer_phone}`);
-      }
+      // FIRST MESSAGE ALREADY SENT → check 2nd message wait time
+      if (cart.sent_status && !cart.second_sent_at) {
+        const firstMessageTime = new Date(cart.first_sent_at).getTime();
+        const waitTime = store.second_message_delay * 1000;
 
-      // 🕒 Show 5-min countdown (for visibility only)
-      let remaining = 300;
-      const countdown = setInterval(() => {
-        const min = Math.floor(remaining / 60);
-        const sec = remaining % 60;
-        process.stdout.write(`\r🕒 Next reminder check in: ${min}:${sec < 10 ? "0" + sec : sec}`);
-        remaining--;
-        if (remaining < 0) {
-          clearInterval(countdown);
-          console.log("\n⏳ 5 minutes complete — next job cycle will re-check carts.");
+        if (now - firstMessageTime >= waitTime) {
+
+          console.log(`📤 Sending 2nd message to ${cart.customer_phone}`);
+
+          const result = await sendWhatsAppMessage(
+            {
+              id: cart.shopify_checkout_id,
+              phone: cart.customer_phone,
+              customer: { first_name: cart.customer_name },
+              line_items: cart.cart_data,
+              abandoned_checkout_url: cart.abandoned_checkout_url,
+              cart_id: cart.id,
+            },
+            template
+          );
+
+          if (result.success) {
+            await cart.update({ second_sent_at: new Date() });
+            console.log(`✅ 2nd message sent to ${cart.customer_phone}`);
+          }
         }
-      }, 1000);
+      }
     }
   } catch (err) {
     console.error("❌ Error in abandonedCart.worker:", err.message);
@@ -60,12 +63,12 @@ exports.processAbandonedCartJob = async () => {
 };
 
 // ✅ Verify via Storefront API
-async function verifyCheckoutExists(cart) {
+async function verifyCheckoutExists(cart, store) {
   try {
     const checkoutId = cart.shopify_checkout_id;
 
     const response = await axios.post(
-      `https://${process.env.SHOPIFY_STORE_DOMAIN}/api/2025-01/graphql.json`,
+      `https://${store.store_url}/api/2025-01/graphql.json`,
       {
         query: `
           query getCheckout($id: ID!) {
@@ -84,7 +87,7 @@ async function verifyCheckoutExists(cart) {
       },
       {
         headers: {
-          "X-Shopify-Storefront-Access-Token": process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN,
+          "X-Shopify-Storefront-Access-Token": store.store_front_access_token,
           "Content-Type": "application/json",
         },
       }

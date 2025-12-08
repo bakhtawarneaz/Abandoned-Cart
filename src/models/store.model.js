@@ -19,10 +19,22 @@ const Store = sequelize.define('Store', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  store_front_access_token: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   status: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
-  }
+  },
+  first_message_delay: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  second_message_delay: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
 });
 
 module.exports = Store;

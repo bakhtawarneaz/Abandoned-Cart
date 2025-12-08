@@ -1,6 +1,6 @@
 const abandonedCartQueue = require('../queues/abandonedCart.queue');
 
-// Run every 10 minutes
+// Run every 1 hour
 abandonedCartQueue.add(
   {},
   {
@@ -10,4 +10,4 @@ abandonedCartQueue.add(
   }
 );
 
-console.log('🕒 Abandoned cart auto-resend job scheduled every 10 minutes');
+console.log('🕒 Abandoned cart auto-resend job scheduled every 1 hour');

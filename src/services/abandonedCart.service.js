@@ -6,8 +6,11 @@ const { sendWhatsAppMessage } = require('../utils/whatsappSender');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-exports.handleCheckoutCreate = async (checkoutData) => {
+
+exports.handleCheckoutCreate = async (req) => {
   try {
+    const checkoutData = req.body;
+
     console.log("🧾 Webhook received for checkout create");
 
     if (checkoutData?.order_id || checkoutData?.completed_at) {
@@ -15,7 +18,25 @@ exports.handleCheckoutCreate = async (checkoutData) => {
       return;
     }
 
-    if (!checkoutData.phone && !checkoutData.shipping_address?.phone && !checkoutData.customer?.phone) {
+    // ---- GET SHOP DOMAIN FROM WEBHOOK ----
+    const shopDomain = req.headers['x-shopify-shop-domain'];
+    const cleanShopDomain = shopDomain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    console.log("🔍 Store request from:", cleanShopDomain);
+
+    // ---- FIND STORE ----
+    const store = await Store.findOne({
+      where: { store_url: cleanShopDomain }
+    });
+
+    if (!store) {
+      console.log("❌ No matching store found for", cleanShopDomain);
+      return;
+    }
+
+    // ---- PHONE CHECK ----
+    if (!checkoutData.phone &&
+        !checkoutData.shipping_address?.phone &&
+        !checkoutData.customer?.phone) {
       console.log("⏳ Skipping — no phone found yet");
       return;
     }
@@ -41,11 +62,9 @@ exports.handleCheckoutCreate = async (checkoutData) => {
       return;
     }
 
-    const store = await Store.findOne({ where: { status: true } });
-    if (!store) throw new Error("No active store found");
-
+    // ---- VERIFY ORDER ----
     await sleep(15000);
-    // 🔍 Verify via Shopify Admin API if checkout token converted to an order
+
     const cleanUrl = store.store_url.replace(/^https?:\/\//, "");
     const shopifyAdminUrl = `https://${cleanUrl}/admin/api/2025-01/orders.json?checkout_token=${token}`;
     const headers = {
@@ -55,16 +74,15 @@ exports.handleCheckoutCreate = async (checkoutData) => {
 
     try {
       const verifyRes = await axios.get(shopifyAdminUrl, { headers });
-      if (verifyRes.data.orders && verifyRes.data.orders.length > 0) {
-        console.log(
-          `✅ Checkout ${id} already converted to order ${verifyRes.data.orders[0].id} — skipping abandoned cart`
-        );
+      if (verifyRes.data.orders?.length > 0) {
+        console.log(`✅ Checkout ${id} already converted to order — skipping abandoned cart`);
         return;
       }
     } catch (err) {
       console.warn("⚠️ Could not verify checkout status via Shopify Admin API");
     }
 
+    // ---- CREATE OR UPDATE ABANDONED CART ----
     const existingCart = await AbandonedCart.findOne({ where: { customer_phone: customerPhone } });
 
     if (existingCart) {
@@ -90,27 +108,26 @@ exports.handleCheckoutCreate = async (checkoutData) => {
       console.log(`🆕 New abandoned cart created for ${customerPhone}`);
     }
 
+    // ---- SEND MESSAGE AFTER DELAY ----
     const template = await WhatsappTemplate.findOne({ where: { store_id: store.id } });
     if (!template) throw new Error("No WhatsApp template found");
 
-    setTimeout(async () => {
+    const delay = store.first_message_delay * 1000;
 
+    setTimeout(async () => {
       try {
         const recheck = await axios.get(shopifyAdminUrl, { headers });
-        if (recheck.data.orders && recheck.data.orders.length > 0) {
+        if (recheck.data.orders?.length > 0) {
           console.log(`⏹️ Recheck: order created after delay for checkout ${id}, skipping message`);
           return;
         }
-      } catch (err) {
-        console.warn("⚠️ Could not recheck checkout status before WhatsApp send");
-      }
+      } catch {}
 
       const freshCart = await AbandonedCart.findOne({ where: { customer_phone: customerPhone } });
-      if (!freshCart || freshCart.sent_status) {
-        console.log(`⚠️ Skipping — message already sent for cart ID: ${freshCart?.id}`);
-        return;
-      }
+      if (!freshCart || freshCart.sent_status) return;
+
       console.log("📤 Sending WhatsApp message for abandoned checkout...");
+
       const result = await sendWhatsAppMessage(
         {
           ...checkoutData,
@@ -119,15 +136,17 @@ exports.handleCheckoutCreate = async (checkoutData) => {
         },
         template
       );
-      
+
       if (result.success) {
-        await freshCart.update({ sent_status: true });
-        console.log(`✅ Initial message sent for cart ID: ${freshCart.id}`);
-      } else {
-        console.warn(`⚠️ Failed to send initial message for cart ID: ${freshCart.id}`);
+        await freshCart.update({ sent_status: true, first_sent_at: new Date() });
+        console.log(`✅ First message sent for cart ID: ${freshCart.id}`);
       }
-    }, 60 * 60 * 1000);
+    }, delay);
+
   } catch (err) {
-    console.error("❌ Error in handleCheckoutCreate:", err.message);
+    console.error("❌ Error in handleCheckoutCreate:", err);
   }
 };
+
+
+

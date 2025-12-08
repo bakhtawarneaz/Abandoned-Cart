@@ -3,7 +3,7 @@ const { success, error } = require('../utils/responseHandler');
 
 exports.handleCheckoutCreate = async (req, reply) => {
   try {
-    const data = await service.handleCheckoutCreate(req.body);
+    const data = await service.handleCheckoutCreate(req);
     return success(reply, 'Abandoned cart processed successfully', data);
   } catch (err) {
     return error(reply, err.message, 400);
@@ -13,7 +13,7 @@ exports.handleCheckoutCreate = async (req, reply) => {
 
 exports.handleCheckoutUpdate = async (req, reply) => {
   try {
-    const data = await service.handleCheckoutCreate(req.body);
+    const data = await service.handleCheckoutCreate(req);
     return success(reply, 'Abandoned cart processed successfully', data);
   } catch (err) {
     return error(reply, err.message, 400);
