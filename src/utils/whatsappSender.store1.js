@@ -84,6 +84,7 @@ exports.sendWhatsAppMessageStore1 = async (order, template) => {
     await WhatsappLog.create({
       store_id: template.store_id,
       cart_id: order.cart_id,
+      order_id: order?.id || order?.order_id || null,
       customer_name: customerName,
       customer_phone: customerPhone,
       response_status: "SENT",
@@ -97,6 +98,7 @@ exports.sendWhatsAppMessageStore1 = async (order, template) => {
     await WhatsappLog.create({
       store_id: template.store_id,
       cart_id: order.cart_id,
+      order_id: order?.id || order?.order_id || null,
       customer_name: customerName,
       customer_phone: customerPhone,
       response_status: "FAILED",

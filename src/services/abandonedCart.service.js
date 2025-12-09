@@ -83,19 +83,22 @@ exports.handleCheckoutCreate = async (req) => {
     }
 
     // ---- CREATE OR UPDATE ABANDONED CART ----
-    const existingCart = await AbandonedCart.findOne({ where: { customer_phone: customerPhone } });
+    const checkoutId = String(id);
+
+    let existingCart = await AbandonedCart.findOne({
+      where: { shopify_checkout_id: checkoutId }
+    });
 
     if (existingCart) {
       await existingCart.update({
-        shopify_checkout_id: String(id),
         cart_data: line_items || [],
         abandoned_checkout_url: checkoutUrl,
         recovered: false,
       });
-      console.log(`🔄 Checkout refreshed for ${customerPhone}`);
+      console.log(`🔄 Checkout refreshed: ${checkoutId}`);
     } else {
       await AbandonedCart.create({
-        shopify_checkout_id: String(id),
+        shopify_checkout_id: checkoutId,
         store_id: store.id,
         customer_name: customer?.first_name || "Guest",
         customer_phone: customerPhone,
@@ -104,9 +107,34 @@ exports.handleCheckoutCreate = async (req) => {
         abandoned_checkout_url: checkoutUrl,
         sent_status: false,
         recovered: false,
+        first_sent_at: null,
       });
-      console.log(`🆕 New abandoned cart created for ${customerPhone}`);
+      console.log(`🆕 New abandoned cart created: ${checkoutId}`);
     }
+    // const existingCart = await AbandonedCart.findOne({ where: { customer_phone: customerPhone } });
+
+    // if (existingCart) {
+    //   await existingCart.update({
+    //     shopify_checkout_id: String(id),
+    //     cart_data: line_items || [],
+    //     abandoned_checkout_url: checkoutUrl,
+    //     recovered: false,
+    //   });
+    //   console.log(`🔄 Checkout refreshed for ${customerPhone}`);
+    // } else {
+    //   await AbandonedCart.create({
+    //     shopify_checkout_id: String(id),
+    //     store_id: store.id,
+    //     customer_name: customer?.first_name || "Guest",
+    //     customer_phone: customerPhone,
+    //     customer_email: email || customer?.email || null,
+    //     cart_data: line_items || [],
+    //     abandoned_checkout_url: checkoutUrl,
+    //     sent_status: false,
+    //     recovered: false,
+    //   });
+    //   console.log(`🆕 New abandoned cart created for ${customerPhone}`);
+    // }
 
     // ---- SEND MESSAGE AFTER DELAY ----
     const template = await WhatsappTemplate.findOne({ where: { store_id: store.id } });

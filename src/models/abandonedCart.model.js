@@ -10,6 +10,7 @@ const AbandonedCart = sequelize.define('AbandonedCart', {
   abandoned_checkout_url: { type: DataTypes.TEXT },
   sent_status: { type: DataTypes.BOOLEAN, defaultValue: false },
   recovered: { type: DataTypes.BOOLEAN, defaultValue: false },
+  first_sent_at: { type: DataTypes.DATE },
   second_sent_at: { type: DataTypes.DATE },
 });
 
